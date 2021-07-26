@@ -1,0 +1,39 @@
+use std::str::FromStr;
+use crate::ast::{Program, Chip, Part, NameMap};
+use string_interner::{StringInterner, DefaultSymbol as Symbol};
+
+grammar(interner: &mut StringInterner);
+
+pub Program: Program = <chips:(<Chip>)*> => Program{<>};
+
+pub Chip: Chip = "CHIP" <name:Ident> "{" <ins:Ins> <outs:Outs> <parts:Parts> "}" => Chip {<>};
+
+Ins = "IN" <List<Ident, ",">> ";";
+
+Outs = "OUT" <List<Ident, ",">> ";";
+
+Parts = "PARTS" ":" <List<Part, ";">>;
+
+Part: Part = <chip_name:Ident> "(" <name_maps:List<NameMap, ",">> ")" => Part {<>};
+
+Ident: Symbol = <s:r"[a-zA-Z]\w*"> => interner.get_or_intern(s);
+
+NameMap: NameMap = <key:Ident> "=" <value:Ident> => NameMap {<>};
+
+// Macro for delimited list, T is item, D is delimiter, last delimiter is optional.
+List<T, D>: Vec<T> = {
+    <mut v:(<T> D)*> <e:T?> => match e {
+        None => v,
+        Some(e) => {
+            v.push(e);
+            v
+        }
+    }
+}
+
+match {
+    r"\s*" => { }, // Skip whitespace
+    r"//[^\n\r]*[\n\r]*" => { }, // Skip `// comments`
+    r"/\*([^\*]*\*+[^\*/])*([^\*]*\*+|[^\*])*\*/" => { },  // Skip `/* comments */`
+    _ // Include everything else
+}
