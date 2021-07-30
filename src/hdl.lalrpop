@@ -1,24 +1,39 @@
-use std::str::FromStr;
-use crate::ast::{Program, Chip, Part, NameMap};
+use std::{collections::{HashMap, HashSet}, str::FromStr};
+use crate::ast::{Program, Chip, Part};
 use string_interner::{StringInterner, DefaultSymbol as Symbol};
 
 grammar(interner: &mut StringInterner);
 
-pub Program: Program = <chips:(<Chip>)*> => Program{<>};
+pub Program: Program = <chips:(<Chip>)*> => {
+    Program { 
+        chips: chips.into_iter().map(|chip| (chip.name, chip)).collect() 
+    }
+};
 
-pub Chip: Chip = "CHIP" <name:Ident> "{" <ins:Ins> <outs:Outs> <parts:Parts> "}" => Chip {<>};
+Chip: Chip = "CHIP" <name:Ident> "{" <ins:Ins> <outs:Outs> <parts:Parts> "}" => Chip {<>};
 
-Ins = "IN" <List<Ident, ",">> ";";
+Ins: HashSet<Symbol> = "IN" <ins:List<Ident, ",">> ";" => {
+    // TODO error on duplicate
+    ins.into_iter().collect()
+};
 
-Outs = "OUT" <List<Ident, ",">> ";";
+Outs: HashSet<Symbol> = "OUT" <outs:List<Ident, ",">> ";" => {
+    // TODO error on duplicate
+    outs.into_iter().collect()
+};
 
 Parts = "PARTS" ":" <List<Part, ";">>;
 
-Part: Part = <chip_name:Ident> "(" <name_maps:List<NameMap, ",">> ")" => Part {<>};
+Part: Part = <chip_name:Ident> "(" <name_map:List<NameMap, ",">> ")" => {
+    Part {
+        chip_name,
+        name_map: name_map.into_iter().collect(),
+    }
+};
 
 Ident: Symbol = <s:r"[a-zA-Z]\w*"> => interner.get_or_intern(s);
 
-NameMap: NameMap = <key:Ident> "=" <value:Ident> => NameMap {<>};
+NameMap: (Symbol, Symbol) = <key:Ident> "=" <value:Ident> => (<>);
 
 // Macro for delimited list, T is item, D is delimiter, last delimiter is optional.
 List<T, D>: Vec<T> = {

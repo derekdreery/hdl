@@ -4,11 +4,15 @@ extern crate lalrpop_util;
 mod ast;
 mod interpreter;
 
+pub use interpreter::Program;
+use std::sync::Arc;
 use string_interner::StringInterner;
 
 lalrpop_mod!(pub hdl);
 
 pub type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
+
+pub type Interner = Arc<StringInterner>;
 
 #[cfg(test)]
 mod tests {
